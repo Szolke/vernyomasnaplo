@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Vérnyomásnapló</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#e9eef1;
+    --surface:#ffffff;
+    --ink:#16242b;
+    --muted:#5d6c73;
+    --faint:#8c9aa1;
+    --line:#dbe3e7;
+    --accent:#0e7c86;
+    --sys:#0e7c86;
+    --dia:#3f6b9e;
+    --pulse:#c77d3a;
+    --shadow:0 1px 2px rgba(22,36,43,.04),0 8px 24px rgba(22,36,43,.06);
+    --radius:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    line-height:1.5;
+    padding:16px 14px 60px;
+    max-width:640px;
+    margin:0 auto;
+    -webkit-font-smoothing:antialiased;
+  }
+  .num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+  /* Header */
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:6px 4px 18px}
+  header h1{font-size:20px;font-weight:600;letter-spacing:-.02em}
+  header .sub{font-size:12px;color:var(--muted);font-weight:500}
+
+  .card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
+
+  /* Latest reading */
+  .latest .eyebrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .eyebrow .k{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+  .badge{font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;color:#fff;white-space:nowrap}
+  .readout{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap}
+  .bp{display:flex;align-items:baseline;gap:6px}
+  .bp .v{font-size:60px;font-weight:600;line-height:.9}
+  .bp .slash{font-size:34px;color:var(--faint);font-weight:400}
+  .bp .u{font-size:12px;color:var(--muted);margin-left:4px;align-self:flex-end;margin-bottom:8px}
+  .pulsebox{display:flex;flex-direction:column;gap:2px;padding-bottom:6px}
+  .pulsebox .pl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+  .pulsebox .pv{font-size:26px;font-weight:600}
+  .pulsebox .pv small{font-size:11px;color:var(--muted);font-weight:400;font-family:'IBM Plex Sans'}
+  .latest .when{margin-top:14px;font-size:13px;color:var(--muted)}
+
+  /* Stats strip */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .stat{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:13px 12px;text-align:center}
+  .stat .l{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:5px}
+  .stat .n{font-size:22px;font-weight:600}
+  .stat .n small{font-size:11px;color:var(--muted);font-weight:400;font-family:'IBM Plex Sans'}
+
+  /* Chart */
+  .chart-card h2,.hist-card h2,.form-card h2{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin-bottom:14px}
+  .legend{display:flex;gap:16px;margin-bottom:6px;flex-wrap:wrap}
+  .legend span{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:500}
+  .legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
+  svg{width:100%;height:auto;display:block;overflow:visible}
+  .gl{stroke:var(--line);stroke-width:1}
+  .glabel{fill:var(--faint);font-size:11px;font-family:'IBM Plex Mono'}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:24px 0}
+
+  /* Form */
+  .form-card{background:linear-gradient(180deg,#0f3f45,#0e2f34);color:#eaf3f4}
+  .form-card h2{color:#7fb9be}
+  .field-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8fc0c4}
+  .field input{
+    font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;
+    background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.14);
+    color:#fff;border-radius:11px;padding:11px 12px;width:100%;text-align:center;
+    -moz-appearance:textfield;
+  }
+  .field input::-webkit-outer-spin-button,.field input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .field input:focus{outline:none;border-color:#3fb5c0;background:rgba(255,255,255,.12)}
+  .field.full{margin-bottom:12px}
+  .field.full input{font-size:15px;text-align:left;font-family:'IBM Plex Sans'}
+  .btn{
+    width:100%;border:none;border-radius:12px;padding:15px;
+    font-family:'IBM Plex Sans';font-size:15px;font-weight:600;
+    background:#38b2bd;color:#052a2e;cursor:pointer;transition:transform .08s,background .15s;
+  }
+  .btn:active{transform:scale(.98)}
+  .btn:hover{background:#46c3ce}
+  .err{color:#ffb4a8;font-size:12px;margin-top:8px;min-height:0;font-weight:500}
+
+  /* History */
+  .day-group{margin-bottom:16px}
+  .day-group:last-child{margin-bottom:0}
+  .day-head{display:flex;align-items:baseline;justify-content:space-between;padding:0 2px 8px;border-bottom:1px solid var(--line);margin-bottom:8px}
+  .day-head .d{font-size:13px;font-weight:600}
+  .day-head .c{font-size:11px;color:var(--faint);font-weight:500}
+  .row{display:flex;align-items:center;gap:12px;padding:9px 2px}
+  .row .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  .row .time{font-size:13px;color:var(--muted);width:44px;flex-shrink:0}
+  .row .vals{font-family:'IBM Plex Mono';font-size:16px;font-weight:600;flex:1}
+  .row .vals .p{color:var(--pulse);font-weight:500;font-size:14px;margin-left:8px}
+  .row .cat{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;color:#fff;white-space:nowrap}
+  .row .del{background:none;border:none;color:var(--faint);font-size:19px;line-height:1;padding:4px 6px;cursor:pointer;border-radius:8px;flex-shrink:0}
+  .row .del:active{background:var(--line)}
+  footer{text-align:center;font-size:11px;color:var(--faint);padding:8px 0}
+</style>
+</head>
+<body>
+  <header>
+    <h1>Vérnyomásnapló</h1>
+    <span class="sub" id="today"></span>
+  </header>
+
+  <section class="card latest" id="latestCard"></section>
+
+  <div class="stats" id="stats"></div>
+  <div style="height:14px"></div>
+
+  <section class="card chart-card">
+    <h2>Alakulás</h2>
+    <div class="legend">
+      <span><i style="background:var(--sys)"></i>Szisztolés</span>
+      <span><i style="background:var(--dia)"></i>Diasztolés</span>
+      <span><i style="background:var(--pulse)"></i>Pulzus</span>
+    </div>
+    <div id="chart"></div>
+  </section>
+
+  <section class="card form-card">
+    <h2>Új mérés</h2>
+    <div class="field-row">
+      <div class="field">
+        <label>SYS</label>
+        <input id="in-sys" type="number" inputmode="numeric" placeholder="—" min="40" max="300">
+      </div>
+      <div class="field">
+        <label>DIA</label>
+        <input id="in-dia" type="number" inputmode="numeric" placeholder="—" min="30" max="200">
+      </div>
+      <div class="field">
+        <label>Pulzus</label>
+        <input id="in-pulse" type="number" inputmode="numeric" placeholder="—" min="30" max="240">
+      </div>
+    </div>
+    <div class="field full">
+      <label>Időpont</label>
+      <input id="in-when" type="datetime-local">
+    </div>
+    <button class="btn" id="addBtn">Mérés mentése</button>
+    <div class="err" id="formErr"></div>
+  </section>
+
+  <section class="card hist-card">
+    <h2>Napló</h2>
+    <div id="history"></div>
+  </section>
+
+  <footer id="statusBar">Az adatok ezen az eszközön, helyben tárolódnak.</footer>
+
+<script>
+const KEY='bp:entries';
+const SEED=[
+  {id:'seed-1',datetime:'2026-07-15T18:42',sys:116,dia:65,pulse:108},
+  {id:'seed-2',datetime:'2026-07-16T08:41',sys:139,dia:69,pulse:97}
+];
+
+let entries=[];
+let persistOk=true;
+
+/* ---------- tároló-adapter ----------
+   Claude artifactban: window.storage.
+   Éles (Cloudflare) környezetben: /api/entries API (KV a háttérben),
+   jelszavas hozzáféréssel és offline gyorsítótárral.            */
+const hasClaudeStorage = (typeof window!=='undefined' && window.storage && typeof window.storage.get==='function');
+const API='/api/entries';
+
+function getToken(){
+  let t=localStorage.getItem('bp:token');
+  if(!t){
+    t=prompt('Add meg a hozzáférési jelszót (amit a Cloudflare-en beállítottál):');
+    if(t){t=t.trim();localStorage.setItem('bp:token',t);}
+  }
+  return t||'';
+}
+function clearToken(){localStorage.removeItem('bp:token');}
+
+const DB = hasClaudeStorage ? {
+  get:(k)=>window.storage.get(k,false),
+  set:(k,v)=>window.storage.set(k,v,false)
+} : {
+  async get(k){
+    if(k!==KEY){const v=localStorage.getItem(k);return v===null?null:{value:v};}
+    try{
+      const res=await fetch(API,{headers:{'authorization':'Bearer '+getToken()}});
+      if(res.status===401){clearToken();throw new Error('unauthorized');}
+      if(!res.ok)throw new Error('http '+res.status);
+      const text=await res.text();
+      localStorage.setItem('bp:cache',text);
+      return {value:text};
+    }catch(e){
+      const cached=localStorage.getItem('bp:cache');
+      if(cached!==null)return {value:cached};
+      throw e;
+    }
+  },
+  async set(k,v){
+    if(k!==KEY){localStorage.setItem(k,v);return {value:v};}
+    localStorage.setItem('bp:cache',v); // mindig cache-eljük, hogy offline se vesszen el
+    const res=await fetch(API,{method:'PUT',headers:{'authorization':'Bearer '+getToken(),'content-type':'application/json'},body:v});
+    if(res.status===401){clearToken();throw new Error('unauthorized');}
+    if(!res.ok)throw new Error('http '+res.status);
+    return {value:v};
+  }
+};
+
+/* ---------- storage ---------- */
+async function load(){
+  let stored=null;
+  try{
+    const r=await DB.get(KEY);
+    stored=r?JSON.parse(r.value):null;
+  }catch(e){stored=null;}
+  let seeded=false;
+  try{
+    const f=await DB.get('bp:seeded');
+    seeded=!!f&&f.value==='1';
+  }catch(e){seeded=false;}
+  entries=Array.isArray(stored)?stored:[];
+  // Egyszeri pótlás: az ismert méréseket beemeljük, ha még hiányoznak (duplikátum nélkül)
+  if(!seeded){
+    const like=s=>entries.some(e=>e.datetime===s.datetime&&e.sys===s.sys&&e.dia===s.dia);
+    SEED.forEach(s=>{if(!like(s))entries.push(s);});
+    await save();
+    try{await DB.set('bp:seeded','1');}catch(e){}
+  }
+}
+async function save(){
+  const payload=JSON.stringify(entries);
+  for(let attempt=0;attempt<2;attempt++){
+    try{
+      await DB.set(KEY,payload);
+      persistOk=true;setStatus();return;
+    }catch(e){
+      if(attempt===1){persistOk=false;setStatus();}
+    }
+  }
+}
+function setStatus(){
+  const el=document.getElementById('statusBar');
+  if(!el)return;
+  if(persistOk){
+    el.textContent=hasClaudeStorage
+      ? 'Az adatok ezen az eszközön, helyben tárolódnak.'
+      : 'Az adatok a felhőben (Cloudflare) tárolódnak – több eszközről is eléred.';
+    el.style.color='var(--faint)';
+  }else{
+    el.textContent='⚠ Nincs kapcsolat a felhővel – az adatok most csak ideiglenesen, ezen az eszközön maradnak meg.';
+    el.style.color='#c4413b';
+  }
+}
+
+/* ---------- classification (európai) ---------- */
+function classify(sys,dia){
+  if(sys<90||dia<60) return{label:'Alacsony',color:'#4a90a4'};
+  const s=sys>=180?6:sys>=160?5:sys>=140?4:sys>=130?3:sys>=120?2:1;
+  const d=dia>=110?6:dia>=100?5:dia>=90?4:dia>=85?3:dia>=80?2:1;
+  const m={1:{label:'Optimális',color:'#2f9e7a'},2:{label:'Normál',color:'#5da85c'},
+    3:{label:'Magas-normál',color:'#d9a441'},4:{label:'1. fokú hipertónia',color:'#e07a4e'},
+    5:{label:'2. fokú hipertónia',color:'#d65a44'},6:{label:'3. fokú hipertónia',color:'#c4413b'}};
+  return m[Math.max(s,d)];
+}
+
+/* ---------- helpers ---------- */
+const sorted=()=>entries.slice().sort((a,b)=>new Date(a.datetime)-new Date(b.datetime));
+function fmtDay(d){return d.toLocaleDateString('hu-HU',{month:'long',day:'numeric',weekday:'long'});}
+function fmtTime(d){return d.toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'});}
+function sameDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();}
+
+/* ---------- render ---------- */
+function render(){
+  const s=sorted();
+  const now=new Date();
+  document.getElementById('today').textContent=now.toLocaleDateString('hu-HU',{year:'numeric',month:'long',day:'numeric'});
+
+  renderLatest(s.length?s[s.length-1]:null,now);
+  renderStats(s,now);
+  renderChart(s);
+  renderHistory(s);
+}
+
+function renderLatest(e,now){
+  const el=document.getElementById('latestCard');
+  if(!e){el.innerHTML='<div class="empty">Még nincs mentett mérés.</div>';return;}
+  const c=classify(e.sys,e.dia);
+  const d=new Date(e.datetime);
+  const rel=sameDay(d,now)?('Ma, '+fmtTime(d)):d.toLocaleDateString('hu-HU',{month:'long',day:'numeric'})+', '+fmtTime(d);
+  el.innerHTML=`
+    <div class="eyebrow"><span class="k">Legutóbbi mérés</span>
+      <span class="badge" style="background:${c.color}">${c.label}</span></div>
+    <div class="readout">
+      <div class="bp num"><span class="v">${e.sys}</span><span class="slash">/</span><span class="v">${e.dia}</span><span class="u">mmHg</span></div>
+      ${e.pulse?`<div class="pulsebox"><span class="pl">Pulzus</span><span class="pv num">${e.pulse} <small>/min</small></span></div>`:''}
+    </div>
+    <div class="when">${rel}</div>`;
+}
+
+function renderStats(s,now){
+  const wrap=document.getElementById('stats');
+  const cutoff=new Date(now.getTime()-7*864e5);
+  let recent=s.filter(e=>new Date(e.datetime)>=cutoff);
+  if(!recent.length)recent=s;
+  const avg=k=>{const v=recent.filter(e=>e[k]!=null&&e[k]!=='');return v.length?Math.round(v.reduce((a,e)=>a+Number(e[k]),0)/v.length):'–';};
+  const todayCount=s.filter(e=>sameDay(new Date(e.datetime),now)).length;
+  wrap.innerHTML=`
+    <div class="stat"><div class="l">7 napi átlag</div><div class="n num">${avg('sys')}/${avg('dia')}</div></div>
+    <div class="stat"><div class="l">Átlag pulzus</div><div class="n num">${avg('pulse')} <small>/min</small></div></div>
+    <div class="stat"><div class="l">Ma</div><div class="n num">${todayCount} <small>mérés</small></div></div>`;
+}
+
+function renderChart(s){
+  const box=document.getElementById('chart');
+  if(s.length<1){box.innerHTML='<div class="empty">A grafikon az első méréstől jelenik meg.</div>';return;}
+  const W=680,H=250,pL=34,pR=8,pT=10,pB=26;
+  const yMin=40,yMax=190;
+  const n=s.length;
+  const x=i=>n<=1?pL+(W-pL-pR)/2:pL+i*(W-pL-pR)/(n-1);
+  const y=v=>pT+(1-(v-yMin)/(yMax-yMin))*(H-pT-pB);
+  let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Vérnyomás alakulása">`;
+  // danger zone above 140
+  svg+=`<rect x="${pL}" y="${y(190)}" width="${W-pL-pR}" height="${y(140)-y(190)}" fill="#c4413b" opacity="0.05"/>`;
+  // gridlines
+  [60,80,100,120,140,160,180].forEach(g=>{
+    svg+=`<line class="gl" x1="${pL}" y1="${y(g)}" x2="${W-pR}" y2="${y(g)}"/>`;
+    svg+=`<text class="glabel" x="${pL-6}" y="${y(g)+4}" text-anchor="end">${g}</text>`;
+  });
+  const line=(k,col,dash)=>{
+    const pts=s.map((e,i)=>e[k]!=null&&e[k]!==''?[x(i),y(Number(e[k]))]:null).filter(Boolean);
+    if(pts.length>1){
+      svg+=`<polyline fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" ${dash?'stroke-dasharray="2 4"':''} points="${pts.map(p=>p.join(',')).join(' ')}"/>`;
+    }
+    pts.forEach(p=>{svg+=`<circle cx="${p[0]}" cy="${p[1]}" r="${n<=1?4:3.2}" fill="#fff" stroke="${col}" stroke-width="2.2"/>`;});
+  };
+  line('pulse','var(--pulse)',true);
+  line('dia','var(--dia)',false);
+  line('sys','var(--sys)',false);
+  svg+=`</svg>`;
+  box.innerHTML=svg;
+}
+
+function renderHistory(s){
+  const wrap=document.getElementById('history');
+  if(!s.length){wrap.innerHTML='<div class="empty">A mentett mérések itt jelennek meg.</div>';return;}
+  const desc=s.slice().reverse();
+  const groups=[];
+  desc.forEach(e=>{
+    const d=new Date(e.datetime);const key=d.toDateString();
+    let g=groups.find(x=>x.key===key);
+    if(!g){g={key,date:d,items:[]};groups.push(g);}
+    g.items.push(e);
+  });
+  wrap.innerHTML=groups.map(g=>`
+    <div class="day-group">
+      <div class="day-head"><span class="d">${fmtDay(g.date)}</span><span class="c">${g.items.length} mérés</span></div>
+      ${g.items.map(e=>{const c=classify(e.sys,e.dia);const d=new Date(e.datetime);
+        return `<div class="row">
+          <span class="dot" style="background:${c.color}"></span>
+          <span class="time num">${fmtTime(d)}</span>
+          <span class="vals">${e.sys}/${e.dia}${e.pulse?`<span class="p">♥ ${e.pulse}</span>`:''}</span>
+          <span class="cat" style="background:${c.color}">${c.label}</span>
+          <button class="del" data-id="${e.id}" aria-label="Törlés">×</button>
+        </div>`;}).join('')}
+    </div>`).join('');
+  wrap.querySelectorAll('.del').forEach(b=>b.onclick=()=>removeEntry(b.dataset.id));
+}
+
+/* ---------- actions ---------- */
+async function addEntry(){
+  const err=document.getElementById('formErr');
+  const sys=parseInt(document.getElementById('in-sys').value,10);
+  const dia=parseInt(document.getElementById('in-dia').value,10);
+  const pulseRaw=document.getElementById('in-pulse').value;
+  const pulse=pulseRaw===''?null:parseInt(pulseRaw,10);
+  const when=document.getElementById('in-when').value;
+  if(!sys||!dia){err.textContent='Add meg a szisztolés és diasztolés értéket.';return;}
+  if(sys<=dia){err.textContent='A szisztolés (felső) értéknek nagyobbnak kell lennie a diasztolésnál.';return;}
+  if(!when){err.textContent='Add meg az időpontot.';return;}
+  err.textContent='';
+  entries.push({id:'e'+Date.now(),datetime:when,sys,dia,pulse});
+  await save();
+  document.getElementById('in-sys').value='';
+  document.getElementById('in-dia').value='';
+  document.getElementById('in-pulse').value='';
+  setDefaultTime();
+  render();
+}
+
+async function removeEntry(id){
+  if(!confirm('Törlöd ezt a mérést?'))return;
+  entries=entries.filter(e=>e.id!==id);
+  await save();render();
+}
+
+function setDefaultTime(){
+  const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
+  document.getElementById('in-when').value=d.toISOString().slice(0,16);
+}
+
+/* ---------- init ---------- */
+(async function(){
+  await load();
+  setDefaultTime();
+  document.getElementById('addBtn').onclick=addEntry;
+  render();
+})();
+</script>
+</body>
+</html>
