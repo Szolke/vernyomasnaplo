@@ -1,5 +1,5 @@
 // Cloudflare Pages Function — /api/entries
-// Bindings needed in the Pages project (Production environment):
+// Bindings required in the Pages project (Production environment):
 //   - KV namespace binding:  BP_KV
 //   - Environment variable:  ACCESS_TOKEN  (your chosen password)
 
